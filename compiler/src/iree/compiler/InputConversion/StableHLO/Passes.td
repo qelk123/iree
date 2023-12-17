@@ -46,6 +46,11 @@ def LegalizeControlFlow :
   let summary = "Legalizes from StableHLO control flow to SCF control flow";
 }
 
+def LegalizeControlFlow2 :
+    Pass<"iree-stablehlo-legalize-control-flow2", "func::FuncOp"> {
+  let summary = "Legalizes from StableHLO control flow to SCF control flow2";
+}
+
 def LegalizeChlo :
     Pass<"iree-stablehlo-legalize-chlo", "func::FuncOp"> {
   let summary = "Legalizes from CHLO ops flow to StableHLO and Shape ops";

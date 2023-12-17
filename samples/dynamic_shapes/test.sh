@@ -13,19 +13,20 @@ set -x
 set -e
 
 ROOT_DIR=$(git rev-parse --show-toplevel)
-BUILD_DIR=${ROOT_DIR}/build-samples
+# BUILD_DIR=${ROOT_DIR}/build-samples
+BUILD_DIR=${ROOT_DIR}/iree-build
 ARTIFACTS_DIR=/tmp/iree/colab_artifacts
 
-# 1. Run the notebook to generate `dynamic_shapes.mlir` and
-#    `dynamic_shapes_cpu.vmfb`
-# TODO(scotttodd): Test pytorch_dynamic_shapes.ipynb instead/also
-${ROOT_DIR}/build_tools/testing/run_python_notebook.sh \
-  ${ROOT_DIR}/samples/dynamic_shapes/tensorflow_dynamic_shapes.ipynb
-test -f ${ARTIFACTS_DIR}/dynamic_shapes.mlir && echo "dynamic_shapes.mlir exists"
+# # 1. Run the notebook to generate `dynamic_shapes.mlir` and
+# #    `dynamic_shapes_cpu.vmfb`
+# # TODO(scotttodd): Test pytorch_dynamic_shapes.ipynb instead/also
+# ${ROOT_DIR}/build_tools/testing/run_python_notebook.sh \
+#   ${ROOT_DIR}/samples/dynamic_shapes/tensorflow_dynamic_shapes.ipynb
+# test -f ${ARTIFACTS_DIR}/dynamic_shapes.mlir && echo "dynamic_shapes.mlir exists"
 
-# 2. Build the `iree-compile` tool.
-cmake -B ${BUILD_DIR} -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo ${ROOT_DIR}
-cmake --build ${BUILD_DIR} --target iree-compile -- -k 0
+# # 2. Build the `iree-compile` tool.
+# cmake -B ${BUILD_DIR} -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo ${ROOT_DIR}
+# cmake --build ${BUILD_DIR} --target iree-compile -- -k 0
 
 # 3. Compile `dynamic_shapes.mlir` using `iree-compile`.
 ${BUILD_DIR}/tools/iree-compile \

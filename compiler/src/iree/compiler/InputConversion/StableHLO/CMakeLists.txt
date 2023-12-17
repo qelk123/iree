@@ -54,6 +54,7 @@ iree_cc_library(
     "ConvertCollectives.cpp"
     "LegalizeCHLO.cpp"
     "LegalizeControlFlow.cpp"
+    "LegalizeControlFlow2.cpp"
     "LegalizeShapeComputations.cpp"
     "LegalizeToLinalgUtils.cpp"
     "LegalizeToLinalgUtils.h"

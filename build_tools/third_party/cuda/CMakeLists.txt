@@ -57,19 +57,23 @@ endif()
 
 # Locate the libdevice file.
 if(EXISTS "${IREE_CUDA_LIBDEVICE_PATH}")
+  message(STATUS "Using ${IREE_CUDA_LIBDEVICE_PATH}")
   # Explicitly provided: do nothing.
 elseif(CUDAToolkit_FOUND AND CUDAToolkit_LIBRARY_ROOT)
   # Note that the variable CUDAToolkit_LIBRARY_ROOT keys off of the presence
   # of version.txt, which was changed to version.json in recent releases
   # and thwarts the search.
+  message(STATUS "Using CUDAToolkit_LIBRARY_ROOT:${CUDAToolkit_LIBRARY_ROOT}")
   set(IREE_CUDA_LIBDEVICE_PATH "${CUDAToolkit_LIBRARY_ROOT}/nvvm/libdevice/libdevice.10.bc")
 elseif(CUDAToolkit_FOUND AND CUDAToolkit_BIN_DIR)
   # Back-track from the bin dir as a fallback.
+  message(STATUS "Using CUDAToolkit_BIN_DIR")
   set(IREE_CUDA_LIBDEVICE_PATH "${CUDAToolkit_BIN_DIR}/../nvvm/libdevice/libdevice.10.bc")
 elseif(CUDAToolkit_ROOT)
   # Sometimes the CUDA toolkit doesn't detect... because, you know. Computers
   # are hard and such. In this case, if the user went to the trouble to
   # tell us where it is, we have enough information.
+  message(STATUS "Using CUDAToolkit_ROOT")
   set(IREE_CUDA_LIBDEVICE_PATH "${CUDAToolkit_ROOT}/nvvm/libdevice/libdevice.10.bc")
 elseif(IREE_CUDA_DOWNLOAD_LIBDEVICE_PATH)
   message(STATUS "Using downloaded CUDA libdevice")

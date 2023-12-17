@@ -31,6 +31,9 @@ void populateLegalizeChloPatterns(MLIRContext *context,
 void populateLegalizeControlFlowPatterns(MLIRContext *context,
                                          RewritePatternSet *patterns);
 
+void populateLegalizeControlFlow2Patterns(MLIRContext *context,
+                                         RewritePatternSet *patterns);
+
 /// Collection of rewrite patterns for lowering of StableHLO dim operations.
 void populateLegalizeShapeComputationPatterns(MLIRContext *context,
                                               RewritePatternSet *patterns);

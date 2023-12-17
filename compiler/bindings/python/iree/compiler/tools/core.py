@@ -272,6 +272,7 @@ def compile_str(input_str: Union[str, bytes], **kwargs):
       Either a byte buffer of the compiled content or None if output_file
       was specified in the options.
     """
+    print("compile command:")
     with TempFileSaver.implicit() as tfs:
         retained_input_file = tfs.alloc_optional("core-input.mlir")
         if retained_input_file:
@@ -286,6 +287,7 @@ def compile_str(input_str: Union[str, bytes], **kwargs):
         if options.output_file:
             options.output_file = retained_output_file
         cl = build_compile_command_line("-", tfs, options)
+        print("compile command:", cl)
         input_bytes = (
             input_str.encode("utf-8") if isinstance(input_str, str) else input_str
         )
