@@ -1,0 +1,2 @@
+mytest/network_case_torch/lenet.mlir filter=lfs diff=lfs merge=lfs -text
+mytest/network_case_torch/alexnet.mlir filter=lfs diff=lfs merge=lfs -text
