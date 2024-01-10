@@ -333,7 +333,7 @@ static iree_status_t iree_vm_bytecode_module_get_function(
           IREE_STATUS_INVALID_ARGUMENT,
           "import ordinal out of range (0 < %" PRIhsz " < %zu)", ordinal,
           iree_vm_ImportFunctionDef_vec_len(imported_functions));
-    }
+    } // 拿到imported_functions的list，包括了name和signature
     iree_vm_ImportFunctionDef_table_t import_def =
         iree_vm_ImportFunctionDef_vec_at(imported_functions, ordinal);
     name = iree_vm_ImportFunctionDef_full_name(import_def);
@@ -698,7 +698,7 @@ static iree_status_t iree_vm_bytecode_module_resolve_import(
                             " < %" PRIhsz ")",
                             ordinal, state->import_count);
   }
-
+  // 在这里更新import table，在对应的ordinal上放入fuction(module + linkage + ordinal)
   iree_vm_bytecode_import_t* import = &state->import_table[ordinal];
   import->function = *function;
 

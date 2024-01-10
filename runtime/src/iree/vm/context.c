@@ -584,7 +584,7 @@ static iree_status_t iree_vm_context_resolve_function_impl(
   }
 
   for (int i = (int)context->list.count - 1; i >= 0; --i) {
-    iree_vm_module_t* module = context->list.modules[i];
+    iree_vm_module_t* module = context->list.modules[i]; // 所以这个module应该是当前依赖的module，在这个module中export了对应的function出来
     if (iree_string_view_equal(module_name, iree_vm_module_name(module))) {
       return module->lookup_function(
           module->self, IREE_VM_FUNCTION_LINKAGE_EXPORT, function_name,

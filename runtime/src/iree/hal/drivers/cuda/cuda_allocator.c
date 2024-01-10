@@ -83,8 +83,8 @@ iree_status_t iree_hal_cuda_allocator_create(
   iree_status_t status = iree_allocator_malloc(
       context->host_allocator, sizeof(*allocator), (void**)&allocator);
   if (iree_status_is_ok(status)) {
-    iree_hal_resource_initialize(&iree_hal_cuda_allocator_vtable,
-                                 &allocator->resource);
+    iree_hal_resource_initialize(&iree_hal_cuda_allocator_vtable, // 管理hal层级的buffer?
+                                 &allocator->resource); // iree_hal_cuda_allocator_vtable作为allocator的resource, 拿到真正的和CUDA相关的allocator的实现
     allocator->context = context;
     allocator->device = device;
     allocator->stream = stream;
@@ -465,7 +465,7 @@ static void iree_hal_cuda_allocator_deallocate_buffer(
 
   iree_hal_buffer_destroy(base_buffer);
 }
-
+// import一个外部的buffer，并在上面创建hal对它的管理
 static iree_status_t iree_hal_cuda_allocator_import_buffer(
     iree_hal_allocator_t* IREE_RESTRICT base_allocator,
     const iree_hal_buffer_params_t* IREE_RESTRICT params,

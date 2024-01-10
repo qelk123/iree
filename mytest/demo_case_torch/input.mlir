@@ -19,6 +19,8 @@ module @LinearModule {
     %4 = torch_c.from_builtin_tensor %_params.bias : tensor<3xf32> -> !torch.vtensor<[3],f32>
     %int1 = torch.constant.int 1
     %5 = torch.aten.add.Tensor %3, %4, %int1 : !torch.vtensor<[3],f32>, !torch.vtensor<[3],f32>, !torch.int -> !torch.vtensor<[3],f32>
-    return %5 : !torch.vtensor<[3],f32>
+    %6 = torch.aten.abs %3 : !torch.vtensor<[3],f32> -> !torch.vtensor<[3],f32>
+    %7 = torch.aten.add.Tensor %5, %6, %int1 : !torch.vtensor<[3],f32>, !torch.vtensor<[3],f32>, !torch.int -> !torch.vtensor<[3],f32>
+    return %7 : !torch.vtensor<[3],f32>
   }
 }

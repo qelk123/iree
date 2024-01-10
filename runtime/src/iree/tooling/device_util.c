@@ -310,7 +310,7 @@ static iree_status_t iree_hal_configure_allocator_from_flags(
 iree_status_t iree_hal_device_set_default_channel_provider(
     iree_hal_device_t* device) {
   if (!iree_hal_mpi_is_configured()) return iree_ok_status();
-  iree_hal_channel_provider_t* channel_provider = NULL;
+  iree_hal_channel_provider_t* channel_provider = NULL; //如果启用了mpi，则默认使用mpi作为channel provider
   IREE_RETURN_IF_ERROR(
       iree_hal_mpi_channel_provider_create(
           iree_hal_device_host_allocator(device), &channel_provider),
@@ -378,7 +378,7 @@ iree_status_t iree_hal_create_device_from_flags(
 
   // Optionally set a collective channel provider used by devices to initialize
   // their default channels. Hosting libraries or applications can do the same
-  // to interface with their own implementations.
+  // to interface with their own implementations. // 更新channel provider
   if (iree_status_is_ok(status)) {
     status = iree_hal_device_set_default_channel_provider(device);
   }

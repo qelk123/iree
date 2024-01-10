@@ -898,6 +898,7 @@ typedef struct iree_hal_command_buffer_vtable_t {
 } iree_hal_command_buffer_vtable_t;
 IREE_HAL_ASSERT_VTABLE_LAYOUT(iree_hal_command_buffer_vtable_t);
 
+// hal_command的通用接口，通过has-a的方式派生具体的command_buffer
 struct iree_hal_command_buffer_t {
   iree_hal_resource_t resource;
   iree_hal_command_buffer_mode_t mode;

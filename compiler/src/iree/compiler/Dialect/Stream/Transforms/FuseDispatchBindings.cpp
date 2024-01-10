@@ -103,14 +103,17 @@ findCorrelatedBindings(unsigned bindingCount,
       }
 
       // Find or create a class for equivalent aliasable resource bindings.
-      auto ecIt = leaders.find(resource);
+      auto ecIt = leaders.find(resource); //leader中已经用了这个resource
       if (ecIt == leaders.end()) {
         // New unique value.
         ec.insert(idx);
-        leaders.insert(std::make_pair(resource, idx));
+        leaders.insert(std::make_pair(resource, idx)); 
+        //当前个dispatchOp的第idx项用到了这个resource
       } else {
         // Found existing; union with leader.
-        ec.unionSets(ecIt->second, idx);
+        ec.unionSets(ecIt->second, idx); //第一个加入的总是leader
+        // 这个resource被一个dispatchOp中的多个idx的项的用到了
+        // ec中保存了当前dispatch op里面每一个resource被哪几项使用了
       }
     }
     ecs.push_back(std::move(ec));
@@ -127,9 +130,19 @@ findCorrelatedBindings(unsigned bindingCount,
     // We do this by starting with all equivalent and then ANDing away
     // divergences.
     llvm::BitVector bits(bindingCount, /*t=*/true);
-    for (auto &ec : ecs) {
+    for (auto &ec : ecs) { //不同的dispatch op之间也可以共享binding
       tempBits.reset();
       for (auto mit = ec.findLeader(i); mit != ec.member_end(); ++mit) {
+        //查看每一个dispatch op中的第i个binding和是否和其他binding绑定到了同样resource上，
+        //如果有多个dispatch op，那就同时看多个dispatch op中的第i个binding是否和其他binding绑定到了同样resource上
+        //因为实际的fuse是需要作用在stream.executable中的builtin.module当中的，因此需要保证调用这个builtin.module名字
+        //的所有stream.cmd.dispatch op的resource使用情况的alias是一致的，比如说：
+        //有一个stream.cmd.dispatch使用的arg1对应的resource和arg2对应的resource是一样的，
+        //那么这个stream.cmd.dispatch理论上可以只传递一个resource，同时传入相应的对于resource的解析方案,
+        //这个是和builtin.module的args对应的，因此对于其他的调用这个builtin.module的dispatch op，使用的arg1和arg2的resource也要一样，
+        //(但是dispatch op1的arg1和dispatch op2的arg1对应的resource可以不一样)
+        //才能在builtin.module中进行使用统一的接口进行解析,当然，由于具体的offset参数是由dispatch给进去的，
+        //因此不同的dispatch访问的resource的slice是可以不一样的
         tempBits.set(*mit);
       }
       bits &= tempBits;
@@ -316,6 +329,7 @@ static void
 fuseDispatchBindings(IREE::Stream::ExecutableOp executableOp,
                      IREE::Stream::ExecutableExportOp exportOp,
                      ArrayRef<IREE::Stream::CmdDispatchOp> dispatchOps,
+                     // 不同的dispatch op，但是调用到了同样的export op
                      MemoizedCmdZeros &memoizedZeros) {
   if (dispatchOps.empty())
     return; // no-op if no dispatches
@@ -454,7 +468,7 @@ public:
         continue;
       for (auto exportOp :
            executableOp.getOps<IREE::Stream::ExecutableExportOp>()) {
-        fuseDispatchBindings(executableOp, exportOp, entryDispatchMap[exportOp],
+        fuseDispatchBindings(executableOp, exportOp, entryDispatchMap[exportOp], //不同的dispatch op，但是调用到了同样的export op
                              memoizedZeros);
       }
     }

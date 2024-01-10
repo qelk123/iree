@@ -90,3 +90,4 @@ llvm-external-projects/iree-dialects/.cache
 # pkgci artifacts
 artifacts/
 iree-build/
+iree-build-2/

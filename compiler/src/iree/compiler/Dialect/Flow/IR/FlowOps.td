@@ -708,6 +708,12 @@ def FLOW_ExecutableExportOp : FLOW_Op<"executable.export", [
     This region takes the workload parameters passed to each flow.dispatch and
     produces an XYZ workgroup count for the 3D grid dispatch.
   }];
+  // 换句话说，flow.dispatch对应着一个vm launch的op，在这个op里面，需要进一步计算
+  // launch dim extent,而executable.export的region就是用来定义这个计算的。
+  // 它的input是源自于region dispatch的，同时最后给出launch dim。这部分代码最后会整合到host侧执行
+  // 最终在hal.command_buffer.dispatch会通过指定workgroups的方式来执行。
+
+  // 这里计算出来的是launch dim各维度的总大小，在实际的kernel内部会有对应的对类似threadIdx.x的解析
 
   let arguments = (ins
     OptionalAttr<StrAttr>:$sym_visibility,

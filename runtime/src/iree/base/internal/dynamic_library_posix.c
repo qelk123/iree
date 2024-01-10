@@ -308,7 +308,7 @@ iree_status_t iree_dynamic_library_lookup_symbol(
   IREE_ASSERT_ARGUMENT(symbol_name);
   IREE_ASSERT_ARGUMENT(out_fn);
   *out_fn = NULL;
-  void* fn = dlsym(library->handle, symbol_name);
+  void* fn = dlsym(library->handle, symbol_name); //从库中拿到我想要的函数地址
   if (!fn) {
     return iree_make_status(IREE_STATUS_NOT_FOUND,
                             "symbol '%s' not found in library", symbol_name);

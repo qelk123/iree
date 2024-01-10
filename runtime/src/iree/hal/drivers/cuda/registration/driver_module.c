@@ -86,7 +86,9 @@ static iree_status_t iree_hal_cuda_driver_factory_try_create(
                             (int)driver_name.size, driver_name.data);
   }
   IREE_TRACE_ZONE_BEGIN(z0);
+  //创建cuda driver
 
+  //设置driver参数（和device相关的参数）
   iree_hal_cuda_device_params_t default_params;
   iree_hal_cuda_device_params_initialize(&default_params);
   if (FLAG_cuda_use_streams) {
@@ -115,7 +117,7 @@ static iree_status_t iree_hal_cuda_driver_factory_try_create(
   return status;
 }
 
-IREE_API_EXPORT iree_status_t
+IREE_API_EXPORT iree_status_t //注册cuda driver到registry中，保证能根据给的device参数搜索到cuda的driver
 iree_hal_cuda_driver_module_register(iree_hal_driver_registry_t* registry) {
   static const iree_hal_driver_factory_t factory = {
       .self = NULL,

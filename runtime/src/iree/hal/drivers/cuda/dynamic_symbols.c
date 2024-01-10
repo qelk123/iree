@@ -49,7 +49,7 @@ static iree_status_t iree_hal_cuda_dynamic_symbols_resolve_all(
                          IREE_CUDA_DRIVER_API_VERSION,                \
                          CU_GET_PROC_ADDRESS_DEFAULT),                \
         "when resolving " #cudaSymbolName " using cuGetProcAddress"); \
-  }
+  } //拿到所有需要的function ptr
 #define NCCL_PFN_DECL(ncclSymbolName, ...)
 #define NCCL_PFN_DECL_STR_RETURN(ncclSymbolName, ...)
 #include "iree/hal/drivers/cuda/dynamic_symbol_tables.h"  // IWYU pragma: keep
@@ -87,6 +87,7 @@ iree_status_t iree_hal_cuda_dynamic_symbols_initialize(
     iree_hal_cuda_dynamic_symbols_t* out_syms) {
   IREE_TRACE_ZONE_BEGIN(z0);
   memset(out_syms, 0, sizeof(*out_syms));
+  // 拿到kCUDALoaderSearchNames的文件句柄，作为cuda_library的实际内容
   iree_status_t status = iree_dynamic_library_load_from_files(
       IREE_ARRAYSIZE(kCUDALoaderSearchNames), kCUDALoaderSearchNames,
       IREE_DYNAMIC_LIBRARY_FLAG_NONE, host_allocator, &out_syms->cuda_library);

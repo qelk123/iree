@@ -37,6 +37,8 @@ static const iree_hal_driver_vtable_t iree_hal_cuda_driver_vtable;
 
 static iree_hal_cuda_driver_t* iree_hal_cuda_driver_cast(
     iree_hal_driver_t* base_value) {
+  // resource必须放在第一项，不然就解析不了，base_value是当作resource被解析的，
+  // 并没有实际的iree_hal_driver_t结构
   IREE_HAL_ASSERT_TYPE(base_value, &iree_hal_cuda_driver_vtable);
   return (iree_hal_cuda_driver_t*)base_value;
 }
@@ -46,7 +48,7 @@ IREE_API_EXPORT void iree_hal_cuda_driver_options_initialize(
   memset(out_options, 0, sizeof(*out_options));
   out_options->default_device_index = 0;
 }
-
+// 创建iree_hal_cuda_driver
 static iree_status_t iree_hal_cuda_driver_create_internal(
     iree_string_view_t identifier,
     const iree_hal_cuda_device_params_t* default_params,
@@ -57,6 +59,10 @@ static iree_status_t iree_hal_cuda_driver_create_internal(
   IREE_RETURN_IF_ERROR(
       iree_allocator_malloc(host_allocator, total_size, (void**)&driver));
 
+  //初始化resource，绑定iree_hal_cuda_driver_vtable，即一套cuda的device的管理办法
+  //在resource被释放的时候会自动清除相关的结构
+
+  //后续可以用这些device管理办法来创建cuda device
   iree_hal_resource_initialize(&iree_hal_cuda_driver_vtable, &driver->resource);
   driver->host_allocator = host_allocator;
   iree_string_view_append_to_buffer(
@@ -68,7 +74,7 @@ static iree_status_t iree_hal_cuda_driver_create_internal(
 
   iree_status_t status =
       iree_hal_cuda_dynamic_symbols_initialize(host_allocator, &driver->syms);
-
+  //拿到所有需要的cuda&nccl库函数的函数指针，并保存在driver->syms的字段当中
   if (iree_status_is_ok(status)) {
     // Try to load NCCL. This will fail if NCCL is unavailable or incompatible.
     // We only fail on unavailability when the user tries to create a channel
@@ -278,7 +284,7 @@ static iree_status_t iree_hal_cuda_driver_create_device_by_id(
   // one was specified when the driver was created.
   CUdevice device = 0;
   if (device_id == IREE_HAL_DEVICE_ID_DEFAULT) {
-    IREE_RETURN_AND_END_ZONE_IF_ERROR(
+    IREE_RETURN_AND_END_ZONE_IF_ERROR( //通过获取device info，判断IREE_HAL_DEVICE_ID_DEFAULT 是否可用
         z0, iree_hal_cuda_driver_select_default_device(
                 base_driver, &driver->syms, driver->default_device_index,
                 host_allocator, &device));
@@ -287,7 +293,7 @@ static iree_status_t iree_hal_cuda_driver_create_device_by_id(
   }
 
   iree_string_view_t device_name = iree_make_cstring_view("cuda");
-
+  // 跳转到这里，开始创建device
   // Attempt to create the device.
   iree_status_t status = iree_hal_cuda_device_create(
       base_driver, device_name, &driver->default_params, &driver->syms, device,

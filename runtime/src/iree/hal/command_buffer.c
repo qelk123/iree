@@ -186,7 +186,8 @@ IREE_API_EXPORT void iree_hal_command_buffer_initialize(
         device, command_buffer, VALIDATION_STATE(command_buffer));
   });
 }
-
+//承上启下，这个函数会被vm的call调用，向下调用到实际device提供的相应vtable的具体实现
+//（找到device对应大的command_buffer，再调用到它的vtable实现）
 IREE_API_EXPORT iree_status_t iree_hal_command_buffer_create(
     iree_hal_device_t* device, iree_hal_command_buffer_mode_t mode,
     iree_hal_command_category_t command_categories,
@@ -214,7 +215,8 @@ IREE_API_EXPORT iree_status_t iree_hal_command_buffer_create(
   }
 
   IREE_TRACE_ZONE_BEGIN(z0);
-  iree_status_t status =
+  // 对应到vm的bytecode指令的时候被调用，但是在cuda device创建的时候会自然创建一个 stream command buffer绑定到cuda上
+  iree_status_t status = 
       IREE_HAL_VTABLE_DISPATCH(device, iree_hal_device, create_command_buffer)(
           device, mode, command_categories, queue_affinity, binding_capacity,
           out_command_buffer);

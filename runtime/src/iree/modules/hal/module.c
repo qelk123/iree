@@ -794,6 +794,8 @@ IREE_VM_ABI_EXPORT(iree_hal_module_command_buffer_collective,  //
                                             element_count);
 }
 
+// 在这里定义了一个vm可以调用的函数，可以通过vm.import拿到这个函数的地址，
+// 再通过vm.call调用这个函数，同时这里也定义了对于统一的函数接口，类型解析方案，以及返回接口
 IREE_VM_ABI_EXPORT(iree_hal_module_command_buffer_push_constants,  //
                    iree_hal_module_state_t,                        //
                    rriCiD, v) {
@@ -1526,7 +1528,7 @@ static const iree_vm_native_module_descriptor_t iree_hal_module_descriptor_ = {
     .function_count = IREE_ARRAYSIZE(iree_hal_module_funcs_),
     .functions = iree_hal_module_funcs_,
 };
-
+// 创建了hal module
 IREE_API_EXPORT iree_status_t iree_hal_module_create(
     iree_vm_instance_t* instance, iree_hal_device_t* device,
     iree_hal_module_flags_t flags, iree_allocator_t host_allocator,
@@ -1552,7 +1554,7 @@ IREE_API_EXPORT iree_status_t iree_hal_module_create(
   IREE_RETURN_IF_ERROR(
       iree_allocator_malloc(host_allocator, total_size, (void**)&base_module));
   memset(base_module, 0, total_size);
-  iree_status_t status =
+  iree_status_t status = //在iree_hal_module_descriptor_里面定义了export function的情况
       iree_vm_native_module_initialize(&interface, &iree_hal_module_descriptor_,
                                        instance, host_allocator, base_module);
   if (!iree_status_is_ok(status)) {
@@ -1564,7 +1566,7 @@ IREE_API_EXPORT iree_status_t iree_hal_module_create(
   module->host_allocator = host_allocator;
   // TODO(benvanik): fix vm yield with result storage.
   module->flags = flags | IREE_HAL_MODULE_FLAG_SYNCHRONOUS;
-  module->shared_device = device;
+  module->shared_device = device; // 对应到@hal.ex.shared_device, vm管理了一个hal device
   iree_hal_device_retain(module->shared_device);
 
   *out_module = base_module;

@@ -137,6 +137,10 @@ def HAL_TensorImportOp : HAL_PureOp<"tensor.import", [
     types, etc.
   }];
 
+  // 比如说：
+  // %4 = stream.tensor.import %arg0 : !hal.buffer_view -> tensor<?x?xf32>{%0, %1} in !stream.resource<external>{%3}
+  // 意味着将一个stream.resource external的%3 byte的buffer导入，视为一个tensor<%0x%1xf32>{%0, %1}，并且将这个tensor的值存入%4中
+
   let arguments = (ins
     AnyTypeOf<[HAL_Buffer, HAL_BufferView]>:$source,
     TypeAttr:$target_encoding,

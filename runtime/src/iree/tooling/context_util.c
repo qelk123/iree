@@ -214,7 +214,7 @@ static iree_status_t iree_tooling_load_hal_async_module(
   // Create HAL module wrapping the device created above.
   iree_hal_module_flags_t flags = IREE_HAL_MODULE_FLAG_NONE;
   iree_vm_module_t* module = NULL;
-  iree_status_t status =
+  iree_status_t status = // module -> device -> device_allocator 然后在创建device的时候会先创建这个device的driver
       iree_hal_module_create(instance, device, flags, host_allocator, &module);
 
   if (iree_status_is_ok(status)) {
@@ -436,7 +436,7 @@ static iree_status_t iree_tooling_resolve_module_dependency_callback(
   }
   if (!module) return iree_ok_status();
 
-  iree_status_t status =
+  iree_status_t status = // 把module保存在state->resolved_list当中
       iree_tooling_module_list_push_back(state->resolved_list, module);
   iree_vm_module_release(module);
   return status;
@@ -486,7 +486,7 @@ iree_status_t iree_tooling_resolve_modules(
                                  (int)module_name.size, module_name.data);
       break;
     }
-    status = iree_tooling_module_list_push_back(resolved_list, user_modules[i]);
+    status = iree_tooling_module_list_push_back(resolved_list, user_modules[i]); //vm module存到user module里面
     if (!iree_status_is_ok(status)) break;
   }
 

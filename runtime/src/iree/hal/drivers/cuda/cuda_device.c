@@ -42,7 +42,7 @@ typedef struct iree_hal_cuda_device_t {
   // Block pool used for command buffers with a larger block size (as command
   // buffers can contain inlined data uploads).
   iree_arena_block_pool_t block_pool;
-
+  // cuda symbol应该指的是cuda库中的函数以及一些其他的创建cuda device的函数
   // Optional driver that owns the CUDA symbols. We retain it for our lifetime
   // to ensure the symbols remains valid.
   iree_hal_driver_t* driver;
@@ -105,7 +105,7 @@ static iree_status_t iree_hal_cuda_device_check_params(
   }
   return iree_ok_status();
 }
-
+// driver -> device -> allocator, command_buffer
 static iree_status_t iree_hal_cuda_device_create_internal(
     iree_hal_driver_t* driver, iree_string_view_t identifier,
     const iree_hal_cuda_device_params_t* params, CUdevice cu_device,
@@ -115,13 +115,13 @@ static iree_status_t iree_hal_cuda_device_create_internal(
   iree_host_size_t total_size = iree_sizeof_struct(*device) + identifier.size;
   IREE_RETURN_IF_ERROR(
       iree_allocator_malloc(host_allocator, total_size, (void**)&device));
-  memset(device, 0, total_size);
+  memset(device, 0, total_size); //创建device的vtable，提供了一套统一的访问派生device attr/方法（比如cuda allocator vtable的方法）
   iree_hal_resource_initialize(&iree_hal_cuda_device_vtable, &device->resource);
   device->driver = driver;
   iree_hal_driver_retain(device->driver);
   iree_string_view_append_to_buffer(
       identifier, &device->identifier,
-      (char*)device + iree_sizeof_struct(*device));
+      (char*)device + iree_sizeof_struct(*device)); //string的data指向了结构体最后多申请出来的内存
   device->params = *params;
   device->device = cu_device;
   device->stream = stream;
@@ -148,7 +148,7 @@ static iree_status_t iree_hal_cuda_device_create_internal(
         cuDeviceGetAttribute(&supports_memory_pools,
                              CU_DEVICE_ATTRIBUTE_MEMORY_POOLS_SUPPORTED,
                              cu_device),
-        "cuDeviceGetAttribute");
+        "cuDeviceGetAttribute"); // 决定了cuMemAllocAsync是否可用
     device->supports_memory_pools = supports_memory_pools != 0;
   }
 
@@ -158,15 +158,16 @@ static iree_status_t iree_hal_cuda_device_create_internal(
         &device->context_wrapper, &params->memory_pools, &device->memory_pools);
   }
 
-  if (iree_status_is_ok(status)) {
+  if (iree_status_is_ok(status)) { //创建cuda的allocator,绑定allocator的vtable
     status = iree_hal_cuda_allocator_create(
         &device->context_wrapper, cu_device, stream,
         device->supports_memory_pools ? &device->memory_pools : NULL,
         &device->device_allocator);
   }
 
-  if (iree_status_is_ok(status) &&
+  if (iree_status_is_ok(status) && //创建cuda的command buffer并且绑定command的vtable
       params->command_buffer_mode == IREE_HAL_CUDA_COMMAND_BUFFER_MODE_STREAM) {
+        // cuda stream command buffer是当前这个command_buffer_mode独有的
     status = iree_hal_cuda_stream_command_buffer_create(
         (iree_hal_device_t*)device, &device->context_wrapper,
         device->tracing_context,
@@ -203,7 +204,7 @@ iree_status_t iree_hal_cuda_device_create(
     status = CU_RESULT_TO_STATUS(
         syms, cuStreamCreate(&stream, CU_STREAM_NON_BLOCKING));
   }
-  if (iree_status_is_ok(status)) {
+  if (iree_status_is_ok(status)) { //创建cuda device
     status = iree_hal_cuda_device_create_internal(driver, identifier, params,
                                                   device, stream, context, syms,
                                                   host_allocator, out_device);
@@ -280,7 +281,7 @@ static iree_allocator_t iree_hal_cuda_device_host_allocator(
 static iree_hal_allocator_t* iree_hal_cuda_device_allocator(
     iree_hal_device_t* base_device) {
   iree_hal_cuda_device_t* device = iree_hal_cuda_device_cast(base_device);
-  return device->device_allocator;
+  return device->device_allocator; // 实际调用到创建device时创建的那个device_allocator
 }
 
 static void iree_hal_cuda_replace_device_allocator(
@@ -432,13 +433,14 @@ static iree_status_t iree_hal_cuda_device_create_channel(
   return iree_hal_cuda_nccl_channel_create(
       &device->context_wrapper, &id, params.rank, params.count, out_channel);
 }
-
+//这是应该是实际调用vm.call @hal.command_buffer.create的时候调用的，直接返回一个out_command_buffer给result
 static iree_status_t iree_hal_cuda_device_create_command_buffer(
     iree_hal_device_t* base_device, iree_hal_command_buffer_mode_t mode,
     iree_hal_command_category_t command_categories,
     iree_hal_queue_affinity_t queue_affinity, iree_host_size_t binding_capacity,
     iree_hal_command_buffer_t** out_command_buffer) {
   iree_hal_cuda_device_t* device = iree_hal_cuda_device_cast(base_device);
+  // command buffer within a command buffer
   if (device->params.allow_inline_execution &&
       iree_all_bits_set(mode,
                         IREE_HAL_COMMAND_BUFFER_MODE_ALLOW_INLINE_EXECUTION)) {
@@ -729,7 +731,7 @@ static iree_status_t iree_hal_cuda_device_profiling_end(
   // Unimplemented (and that's ok).
   return iree_ok_status();
 }
-
+// 提供了一组直接访问到base device vtable直接访问到derived device attr的方法
 static const iree_hal_device_vtable_t iree_hal_cuda_device_vtable = {
     .destroy = iree_hal_cuda_device_destroy,
     .id = iree_hal_cuda_device_id,

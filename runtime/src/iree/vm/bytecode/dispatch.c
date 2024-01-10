@@ -448,6 +448,7 @@ static iree_status_t iree_vm_bytecode_issue_import_call(
     iree_vm_stack_frame_t* IREE_RESTRICT* out_caller_frame,
     iree_vm_registers_t* out_caller_registers) {
   // Call external function.
+  // 调用了这个外部的call
   iree_status_t call_status =
       call.function.module->begin_call(call.function.module->self, stack, call);
   if (iree_status_is_deferred(call_status)) {
@@ -653,6 +654,7 @@ iree_status_t iree_vm_bytecode_dispatch_resume(
                                    call_results);
 }
 
+// 执行vm bytecode
 static iree_status_t iree_vm_bytecode_dispatch(
     iree_vm_stack_t* IREE_RESTRICT stack,
     iree_vm_bytecode_module_t* IREE_RESTRICT module,
@@ -1658,7 +1660,7 @@ static iree_status_t iree_vm_bytecode_dispatch(
         }
       }
     });
-
+    // 在这里处理vm.call
     DISPATCH_OP(CORE, Call, {
       int32_t function_ordinal = VM_DecFuncAttr("callee");
       const iree_vm_register_list_t* src_reg_list =

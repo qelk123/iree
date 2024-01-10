@@ -108,6 +108,7 @@ static iree_status_t iree_hal_cuda2_driver_factory_try_create(
   return status;
 }
 
+//在这里把不同种设备的driver factory注册进driver registry当中
 IREE_API_EXPORT iree_status_t
 iree_hal_cuda2_driver_module_register(iree_hal_driver_registry_t* registry) {
   static const iree_hal_driver_factory_t factory = {

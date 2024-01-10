@@ -276,7 +276,7 @@ IREE_API_EXPORT iree_status_t iree_hal_driver_registry_try_create(
   // registry.
   iree_status_t status = iree_ok_status();
   iree_slim_mutex_lock(&registry->mutex);
-
+  // 所以是通过先前加入到registry的factories，通过其通过的enumerate方法，来判断是否和当前指定的driver_name相符，如果相符，就调用try_create方法，创建该driver
   // Enumerate each factory and scan for the requested driver.
   // NOTE: we scan in reverse so that we prefer the first hit in the most
   // recently registered factory.
@@ -346,7 +346,7 @@ IREE_API_EXPORT iree_status_t iree_hal_create_device(
       "creating driver for device '%.*s'", (int)device_uri.size,
       device_uri.data);
 
-  // Have the driver create the device.
+  // Have the driver create the device. 所以是先创建一种类型的device的driver,然后用这个driver创建这个类型的device
   iree_status_t status = iree_hal_driver_create_device_by_uri(
       driver, device_uri, host_allocator, out_device);
 

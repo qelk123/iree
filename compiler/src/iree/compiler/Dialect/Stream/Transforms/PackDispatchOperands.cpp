@@ -267,6 +267,7 @@ static void updateExportFuncOp(mlir::func::FuncOp funcOp) {
     auto newArg = recomposeFromI32sAndConvert(
         &entryBlock, oldArg.getLoc(), oldArg.getType(), oldArgAttr, newArgTypes,
         newArgAttrs, resourceConfig, builder);
+    //后续用的时候需要将i32的arg还原成原始type
     oldArg.replaceAllUsesWith(newArg);
   }
 
@@ -303,7 +304,7 @@ public:
         continue;
       for (auto funcOp : innerModuleOp.getOps<mlir::func::FuncOp>()) {
         if (funcOp.isPublic()) {
-          updateExportFuncOp(funcOp);
+          updateExportFuncOp(funcOp); //转换stream.executable的inner module的func的args
         }
       }
     }
@@ -316,7 +317,7 @@ public:
                 .lookupNearestSymbolFrom<IREE::Stream::ExecutableExportOp>(
                     dispatchOp, entryPointAttr);
         if (exportOp) {
-          updateDispatchOp(dispatchOp, exportOp);
+          updateDispatchOp(dispatchOp, exportOp); //转换stream.cmd.dispatch的args
         }
       });
       return WalkResult::advance();

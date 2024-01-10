@@ -22,7 +22,7 @@ extern "C" {
 typedef struct iree_hal_cuda_dynamic_symbols_t {
   iree_dynamic_library_t* cuda_library;
   iree_dynamic_library_t* nccl_library;
-
+  //一堆函数指针?
 #define CU_PFN_DECL(cudaSymbolName, ...) \
   CUresult (*cudaSymbolName)(__VA_ARGS__);
 #define NCCL_PFN_DECL(ncclSymbolName, ...) \

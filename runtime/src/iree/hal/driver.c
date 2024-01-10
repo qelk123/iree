@@ -104,7 +104,7 @@ IREE_API_EXPORT iree_status_t iree_hal_driver_create_device_by_id(
   IREE_TRACE_ZONE_END(z0);
   return status;
 }
-
+//调用driver对应的v_table中的create_device_by_path函数创建真正的device
 IREE_API_EXPORT iree_status_t iree_hal_driver_create_device_by_path(
     iree_hal_driver_t* driver, iree_string_view_t driver_name,
     iree_string_view_t device_path, iree_host_size_t param_count,

@@ -22,7 +22,7 @@
 // Users are meant to `#define EXPORT_FN` to be able to access the information.
 // #define EXPORT_FN(name, arg_type, ret_type, target_fn)
 
-// clang-format off
+// clang-format off //这里时hal所有export出去的function
 
 EXPORT_FN("allocator.allocate", iree_hal_module_allocator_allocate, rIiiI, r)
 EXPORT_FN("allocator.import", iree_hal_module_allocator_import, riIiirII, r)

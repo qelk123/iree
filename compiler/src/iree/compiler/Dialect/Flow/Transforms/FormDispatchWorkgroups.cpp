@@ -192,7 +192,8 @@ convertExtractSliceOps(mlir::TensorDimTrackingRewriter &rewriter,
 ///   resolved in the backends into the actual workgroup count computation.
 /// - To correlate back to the captured workload,
 /// `flow.dispatch.workload.ordinal`
-///   to map the captured operand to the position in the workload list.
+///   to map the captured operand to the position in the workload list. 
+/// 对应到 flow.dispatch.workgroups[%0, %1](%2, %0, %1)方括号里面的内容？
 static void
 createDefaultWorkgroupCountRegion(RewriterBase &rewriter,
                                   Flow::DispatchWorkgroupsOp workgroupsOp) {
@@ -203,6 +204,7 @@ createDefaultWorkgroupCountRegion(RewriterBase &rewriter,
   }
 
   // Compute the `workload`. For now all `IndexType` are treated as workload.
+  // 用argument里面的index type作为flow.dispatch.workgroups的workload部分，计算真正的workload
   SmallVector<Value> workload;
   SmallVector<Type> workloadTypes;
   SmallVector<Location> workloadLocs;
@@ -240,6 +242,7 @@ createDefaultWorkgroupCountRegion(RewriterBase &rewriter,
     }
     rewriter.setInsertionPointToStart(&body.front());
     int ordinalNumber = 0;
+    // 依照这个逻辑，DispatchWorkloadOrdinalOp的第二个参数就是flow.dispatch.workgroups中的idx位置
     for (auto [index, operand] : llvm::enumerate(workgroupsOp.getArguments())) {
       if (!llvm::isa<IndexType>(operand.getType()))
         continue;

@@ -273,6 +273,7 @@ static llvm::SmallBitVector getOuterParallelLoops(Operation *op) {
 
   auto interfaceOp = dyn_cast<TilingInterface>(op);
   if (!interfaceOp) {
+    //一般的generic op应该没有Tilinginterface? generic op 应该是属于LinalgOp这个interface？
     // For ops that dont implement the `TilingInterface` just return empty.
     return llvm::SmallBitVector{};
   }
@@ -349,14 +350,35 @@ static bool hasCompatibleOuterParallelLoops(
 
   llvm::SmallBitVector producerParallelLoops =
       getOuterParallelLoops(cast<TilingInterface>(producer.getOperation()));
+
   llvm::SmallBitVector consumerParallelLoops =
       getOuterParallelLoops(cast<TilingInterface>(consumer.getOperation()));
+
+
+  LLVM_DEBUG({
+    llvm::dbgs() << "\n--- producerParallelLoops ---\n";
+    for (int i = 0; i < producerParallelLoops.size(); i ++) {
+      llvm::dbgs() << producerParallelLoops[i] << " ";
+    }
+    llvm::dbgs() << "\n\n";
+    llvm::dbgs() << "\n--- consumerParallelLoops ---\n";
+    for (int i = 0; i < consumerParallelLoops.size(); i ++) {
+      llvm::dbgs() << consumerParallelLoops[i] << " ";
+    }
+    llvm::dbgs() << "\n\n";
+    llvm::dbgs() << "\n--- rootOuterParallelLoops ---\n";
+    for (int i = 0; i < rootOuterParallelLoops.size(); i ++) {
+      llvm::dbgs() << rootOuterParallelLoops[i] << " ";
+    }
+    llvm::dbgs() << "\n\n";
+  });
+
 
   if (!matchIteratorTypes(rootOuterParallelLoops, producerParallelLoops) ||
       !matchIteratorTypes(rootOuterParallelLoops, consumerParallelLoops)) {
     return false;
   }
-
+  //拿到producer对应output的index map以及拿到consumer对应的operand的index map
   auto producerIndexingMap = producer.getIndexingMapMatchingResult(
       llvm::cast<OpResult>(operand.get()));
   auto consumerIndexingMap = consumer.getMatchingIndexingMap(&operand);
@@ -369,7 +391,8 @@ static bool hasCompatibleOuterParallelLoops(
   llvm::SmallBitVector producerProjectedDims(rootOuterParallelLoops);
   producerProjectedDims.flip();
   auto projectedProducerMap =
-      getProjectedMap(producerIndexingMap, producerProjectedDims);
+      getProjectedMap(producerIndexingMap, producerProjectedDims); 
+      // 把rootOuterParallelLoops中设为false的维度在projectedProducerMap中对应的expr项置成0
 
   llvm::SmallBitVector consumerProjectedDims(rootOuterParallelLoops);
   consumerProjectedDims.flip();
@@ -377,6 +400,9 @@ static bool hasCompatibleOuterParallelLoops(
   auto projectedConsumerMap =
       getProjectedMap(consumerIndexingMap, consumerProjectedDims);
 
+  //map是等价关系，同时插入了一些0的维度
+  //producer生成这个中间变量和consumer使用这个中间变量的依赖关系和for loop的关系是一致的，对于
+  //rootOuterParallelLoops相同的迭代位置，producer产生的中间变量的元素和consumer使用的中间变量的元素得保持一致？
   return isIdentityMapWithZeros(projectedProducerMap) &&
          isIdentityMapWithZeros(projectedConsumerMap);
 }
@@ -423,7 +449,7 @@ static bool areOpsFusable(Operation *producer, Operation *consumer,
       continue;
     allUses.push_back(&producerUse);
   }
-
+  // consumer用到的所有得到producer的result都得有着compatible的rootOuterParallelLoops
   // Check that the consumer and producer have compatible outer parallel loops.
   if (!llvm::all_of(allUses, [&](OpOperand *operand) {
         return hasCompatibleOuterParallelLoops(*operand,
@@ -595,9 +621,10 @@ static void fuseRootsWithConsumers(MLIRContext *context,
           currRoot, dominanceInfo, /*fuseMultiUse=*/options.fuseMultiUse);
       if (!fusableUse)
         continue;
-
+      //尝试把当前的root fuse到root的一个User，要求这个User是root其他User的支配节点
       // Analyse the use to see if it is fusable.
       Operation *consumerOp = fusableUse.value()->getOwner();
+      //不能和其他的group打架！！
       if (hasRootOpAttribute(consumerOp) ||
           hasFusionGroupsAttribute(consumerOp)) {
         continue;
@@ -675,11 +702,14 @@ static void fuseRootsWithProducers(MLIRContext *context, Operation *root,
       Operation *producer = operand.get().getDefiningOp();
       if (!producer)
         continue;
+      // 一些基础的op也没有包括进来？作为边界条件？
+      // "Fix the producer fusability consideration, to not include clonable ops, since they get fused anyway."
+      // 为了避免这些op的抢占，将这部分op的fuse移动到后面进行（通过复制）
       if (isClonableIntoDispatchOp(producer) ||
           hasFusionGroupsAttribute(producer) || hasRootOpAttribute(producer)) {
         continue;
       }
-
+      // 拿到这个producer的一个user，这个user支配其他所有的user，因此有可能为空（不存在一个这样的user）
       std::optional<OpOperand *> fusableUse = getFusableUse(
           producer, dominanceInfo, /*fuseMultiUse=*/options.fuseMultiUse);
       if (!fusableUse || fusableUse.value()->getOwner() != candidate)
@@ -717,6 +747,8 @@ decideFusableLinalgOps(Region &region, DominanceInfo const &dominanceInfo,
     // - To fuse with consumers make the consumer the root.
     SmallVector<Operation *> roots;
     for (Operation &op : llvm::reverse(block)) {
+      // 控制流一定会把dispatch region隔断，划分为不同的region
+      // 控制流是放在Host测去做的
       if (isa<scf::SCFDialect>(op.getDialect())) {
         for (auto &region : op.getRegions()) {
           numRootOps = decideFusableLinalgOps(region, dominanceInfo, options,
@@ -734,6 +766,12 @@ decideFusableLinalgOps(Region &region, DominanceInfo const &dominanceInfo,
       fuseRootsWithProducers(context, &op, newGroup, dominanceInfo, options);
       roots.push_back(&op);
     }
+    LLVM_DEBUG({
+      llvm::dbgs() << "\n--- After fuse with producer ---\n";
+      block.dump();
+      llvm::dbgs() << "\n\n";
+    });
+    //尝试将的roots和root的user fuse在一起（这个user不能已经被fuse到其他的group当中，同是得一个region内部的）
     roots = llvm::to_vector(llvm::reverse(roots));
     fuseRootsWithConsumers(context, roots, dominanceInfo, options);
   }
@@ -754,7 +792,7 @@ decideFusableLinalgOps(Region &region, DominanceInfo const &dominanceInfo,
           isa<linalg::FillOp>(op)) {
         continue;
       }
-
+      //把剩下的上述op作为root op构建新的dispatch region
       unsigned newGroup = numRootOps++;
       setRootAttribute(context, &op, newGroup);
 
@@ -803,7 +841,7 @@ createFusionGroups(TensorDimTrackingRewriter &rewriter,
       producers[getFusionGroups(op).front()].push_back(op);
       removeFusionGroupsAttribute(op);
     }
-  });
+  });// 拿到所有group的root的producer
 
   // Step 2. Create a DispatchRegionOp for every fusion group.
   OpBuilder::InsertionGuard g(rewriter);
@@ -840,7 +878,7 @@ createFusionGroups(TensorDimTrackingRewriter &rewriter,
           return failure();
         }
       }
-
+      //往region中加入producer
       auto newRegionOp =
           movePrecedingOpsIntoDispatchRegion(rewriter, producer, regionOp);
       if (failed(newRegionOp))

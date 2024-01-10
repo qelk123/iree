@@ -105,6 +105,7 @@ static inline bool iree_hal_resource_is(const void* resource,
 // Asserts (**DEBUG ONLY**) that the |resource| has the given |vtable| type.
 // This is only useful to check for programmer error and may have false
 // positives - do not rely on it for handling untrusted user input.
+//根据vtable是否匹配，来实现downcast,因为vtable是在base_command_buffer的resource里面的
 #define IREE_HAL_ASSERT_TYPE(resource, vtable)             \
   IREE_ASSERT_TRUE(iree_hal_resource_is(resource, vtable), \
                    "type does not match expected " #vtable)

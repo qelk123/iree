@@ -261,10 +261,10 @@ static iree_status_t IREE_API_PTR iree_vm_native_module_lookup_function(
   ptrdiff_t min_ordinal = 0;
   ptrdiff_t max_ordinal = module->descriptor->export_count - 1;
   const iree_vm_native_export_descriptor_t* exports =
-      module->descriptor->exports;
-  while (min_ordinal <= max_ordinal) {
+      module->descriptor->exports; //对应到了runtime/src/iree/modules/hal/module.c中的export部分，在runtime/src/iree/modules/hal/exports.inl中定义的部分在这里被匹配！！！
+  while (min_ordinal <= max_ordinal) { //二分查找这个module中export出来的，符合当前名称符合当前的
     ptrdiff_t ordinal = (min_ordinal + max_ordinal) / 2;
-    int cmp = iree_string_view_compare(exports[ordinal].local_name, name);
+    int cmp = iree_string_view_compare(exports[ordinal].local_name, name); //字典序二分
     if (cmp == 0) {
       return iree_vm_native_module_get_function(self, linkage, ordinal,
                                                 out_function, NULL, NULL);
@@ -336,9 +336,9 @@ static iree_status_t iree_vm_native_module_issue_call(
   const uint16_t function_ordinal = callee_frame->function.ordinal;
   const iree_vm_native_function_ptr_t* function_ptr =
       &module->descriptor->functions[function_ordinal];
-  iree_status_t status =
+  iree_status_t status = //这里是ABI的检查，检查调用的参数和返回值type是否和export的匹配
       function_ptr->shim(stack, flags, args_storage, rets_storage,
-                         function_ptr->target, module->self, module_state);
+                         function_ptr->target, module->self, module_state); //这里是真正的调用，所以是在每次调用的时候即时解析拿到function_ptr的
   if (iree_status_is_deferred(status)) {
     // Call deferred; bail and return to the scheduler.
     // Note that we preserve the stack.
@@ -376,7 +376,7 @@ static iree_status_t IREE_API_PTR iree_vm_native_module_begin_call(
                             "function ordinal out of bounds: 0 < %u < %" PRIhsz,
                             call.function.ordinal,
                             module->descriptor->export_count);
-  }
+  } //调用的函数是一个正确的export的函数
   if (module->user_interface.begin_call) {
     return module->user_interface.begin_call(module->self, stack, call);
   }
@@ -388,7 +388,7 @@ static iree_status_t IREE_API_PTR iree_vm_native_module_begin_call(
   iree_vm_stack_frame_t* callee_frame = NULL;
   IREE_RETURN_IF_ERROR(iree_vm_stack_function_enter(
       stack, &call.function, IREE_VM_STACK_FRAME_NATIVE, frame_size,
-      /*frame_cleanup_fn=*/NULL, &callee_frame));
+      /*frame_cleanup_fn=*/NULL, &callee_frame)); //一个新的栈？
 
   // Begin call with fresh callee frame.
   return iree_vm_native_module_issue_call(

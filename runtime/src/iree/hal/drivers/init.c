@@ -37,7 +37,7 @@ static iree_status_t iree_hal_register_external_drivers(
 }
 #endif  // IREE_HAVE_HAL_EXTERNAL_DRIVERS
 
-IREE_API_EXPORT iree_status_t
+IREE_API_EXPORT iree_status_t //定义需要注册的driver
 iree_hal_register_all_available_drivers(iree_hal_driver_registry_t* registry) {
   IREE_TRACE_ZONE_BEGIN(z0);
 

@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
                        "Dumps information about parsed parameter files.\n");
   iree_flags_parse_checked(IREE_FLAGS_PARSE_MODE_DEFAULT, &argc, &argv);
 
-  iree_io_scope_map_t scope_map = {0};
+  iree_io_scope_map_t scope_map = {{0}};
   iree_io_scope_map_initialize(host_allocator, &scope_map);
 
   // Parse parameters using the common tooling flags.

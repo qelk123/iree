@@ -749,7 +749,7 @@ typedef struct iree_hal_cmd_dispatch_t {
   uint32_t workgroup_z;
 } iree_hal_cmd_dispatch_t;
 
-static iree_status_t iree_hal_deferred_command_buffer_dispatch(
+static iree_status_t iree_hal_deferred_command_buffer_dispatch( //通过这里，这是塞进command_buffer里面但是不真的坐dispatch
     iree_hal_command_buffer_t* base_command_buffer,
     iree_hal_executable_t* executable, int32_t entry_point,
     uint32_t workgroup_x, uint32_t workgroup_y, uint32_t workgroup_z) {
