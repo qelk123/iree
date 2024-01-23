@@ -1278,7 +1278,7 @@ func.func @main(%arg0: !hal.buffer_view) -> !hal.buffer_view attributes {iree.ab
   return %4 : !hal.buffer_view
 }
 
-// -----// IR Dump After CaptureDispatchDynamicDims (iree-flow-capture-dispatch-dynamic-dims) //----- //
+// -----// IR Dump After CaptureDispatchDynamicDims (iree-flow-capture-dispatch-dynamic-dims) //----- // //完成了动态维度的捕获，将动态矩阵绑定到传入的参数上
 func.func @main(%arg0: !hal.buffer_view) -> !hal.buffer_view attributes {iree.abi.stub} {
   %0 = hal.buffer_view.dim<%arg0 : !hal.buffer_view>[0] : index
   %1 = hal.buffer_view.dim<%arg0 : !hal.buffer_view>[1] : index

@@ -6329,7 +6329,7 @@ module @LinearModule attributes {hal.device.targets = [#device_target_cuda]} {
     %0 = stream.tensor.import %arg0 : !hal.buffer_view -> tensor<4xf32> in !stream.resource<external>{%c16}
     %1 = stream.timepoint.join max(%_params.weight__timepoint, %_params.weight__timepoint_0) => !stream.timepoint
     %c0_1 = arith.constant 0 : index
-    %result, %result_timepoint = stream.resource.alloca uninitialized await(%1) => !stream.resource<external>{%c12} => !stream.timepoint
+    %result, %result_timepoint = stream.resource.alloca uninitialized await(%1) => !stream.resource<external>{%c12} => !stream.timepoint // alloc result resource
     %2 = stream.timepoint.join max(%1, %result_timepoint) => !stream.timepoint
     %3 = stream.cmd.execute await(%2) => with(%0 as %arg1: !stream.resource<external>{%c16}, %_params.weight as %arg2: !stream.resource<constant>{%c48}, %_params.bias as %arg3: !stream.resource<constant>{%c12}, %result as %arg4: !stream.resource<external>{%c12}) {
       stream.cmd.dispatch @main_dispatch_0::@main_dispatch_0_matmul_1x3x4_f32 {

@@ -1,0 +1,290 @@
+
+#composite_of_128b = #util.composite<128xi8, [
+    dense<[[1.54099607, -0.293428898, -2.17878938], [0.568431258, -1.08452237, -1.39859545], [0.403346837, 0.838026344, -0.719257593], [-0.403343529, -0.596635341, 0.182036489]]> : tensor<4x3xf32>,
+    dense<0> : vector<16xi8>,
+    dense<[-0.856674611, 1.10060418, -1.07118738]> : tensor<3xf32>,
+    dense<0> : vector<52xi8>,
+]>
+#executable_target_cuda_nvptx_fb = #hal.executable.target<"cuda", "cuda-nvptx-fb", {target_arch = "sm_75"}>
+#pipeline_layout = #hal.pipeline.layout<push_constants = 0, sets = [<0, bindings = [<0, storage_buffer, ReadOnly>, <1, storage_buffer, ReadOnly>, <2, storage_buffer>]>]>
+#translation = #iree_codegen.translation_info<LLVMGPUMatmulSimt>
+#device_target_cuda = #hal.device.target<"cuda", {executable_targets = [#executable_target_cuda_nvptx_fb], legacy_sync}>
+module @LinearModule attributes {hal.device.targets = [#device_target_cuda]} {
+  util.global private @_device_query_0 : i1
+  util.global private @_descriptor_set_layout_0 : !hal.descriptor_set_layout
+  util.global private @_pipeline_layout_0 : !hal.pipeline_layout
+  util.global private @_executable_main_dispatch_0 : !hal.executable
+  util.global private mutable @_params.weight__timepoint : !hal.fence
+  util.global private @_params.weight : !hal.buffer
+  util.initializer {
+    %device = hal.ex.shared_device : !hal.device
+    %ok, %value = hal.device.query<%device : !hal.device> key("hal.executable.format" :: "cuda-nvptx-fb") : i1, i1 = false
+    util.global.store %value, @_device_query_0 : i1
+    %device_0 = hal.ex.shared_device : !hal.device
+    %descriptor_set_layout = hal.descriptor_set_layout.create device(%device_0 : !hal.device) flags("None") bindings([#hal.descriptor_set.binding<0, storage_buffer, ReadOnly>, #hal.descriptor_set.binding<1, storage_buffer, ReadOnly>, #hal.descriptor_set.binding<2, storage_buffer>]) : !hal.descriptor_set_layout
+    util.global.store %descriptor_set_layout, @_descriptor_set_layout_0 : !hal.descriptor_set_layout
+    %_descriptor_set_layout_0 = util.global.load @_descriptor_set_layout_0 : !hal.descriptor_set_layout
+    %device_1 = hal.ex.shared_device : !hal.device
+    %pipeline_layout = hal.pipeline_layout.create device(%device_1 : !hal.device) push_constants(0) layouts([%_descriptor_set_layout_0]) : !hal.pipeline_layout
+    util.global.store %pipeline_layout, @_pipeline_layout_0 : !hal.pipeline_layout
+    %c-1 = arith.constant -1 : index
+    %c0 = arith.constant 0 : index
+    %_device_query_0 = util.global.load @_device_query_0 : i1
+    %device_2 = hal.ex.shared_device : !hal.device
+    %0 = arith.select %_device_query_0, %c0, %c-1 : index
+    %1 = arith.index_cast %0 : index to i32
+    cf.switch %1 : i32, [
+      default: ^bb2,
+      0: ^bb1
+    ]
+  ^bb1:  // pred: ^bb0
+    %_pipeline_layout_0 = util.global.load @_pipeline_layout_0 : !hal.pipeline_layout
+    %exe = hal.executable.create device(%device_2 : !hal.device) target(@main_dispatch_0::@cuda_nvptx_fb) layouts([%_pipeline_layout_0]) : !hal.executable
+    cf.br ^bb3(%exe : !hal.executable)
+  ^bb2:  // pred: ^bb0
+    %2 = util.null : !hal.executable
+    cf.br ^bb3(%2 : !hal.executable)
+  ^bb3(%3: !hal.executable):  // 2 preds: ^bb1, ^bb2
+    util.global.store %3, @_executable_main_dispatch_0 : !hal.executable
+    cf.br ^bb4
+  ^bb4:  // pred: ^bb3
+    %c0_i32 = arith.constant 0 : i32
+    %c-1_i64 = arith.constant -1 : i64
+    %c0_3 = arith.constant 0 : index
+    %c128 = arith.constant 128 : index
+    %c0_i64 = arith.constant 0 : i64
+    %4 = util.null : !hal.fence
+    %buffer_cst = util.buffer.constant {alignment = 64 : index} : !util.buffer = #composite_of_128b
+    %device_4 = hal.ex.shared_device : !hal.device
+    %allocator = hal.device.allocator<%device_4 : !hal.device> : !hal.allocator
+    %did_import, %mapped = hal.allocator.import<%allocator : !hal.allocator> source(%buffer_cst : !util.buffer)[%c0_3, %c128] affinity(%c-1_i64) type("DeviceVisible|DeviceLocal") usage("TransferSource|TransferTarget|Transfer|DispatchStorageRead|DispatchStorageWrite|DispatchStorage|SharingImmutable") : i1, !hal.buffer
+    cf.cond_br %did_import, ^bb6(%4, %mapped : !hal.fence, !hal.buffer), ^bb5
+  ^bb5:  // pred: ^bb4
+    %buffer = hal.allocator.allocate<%allocator : !hal.allocator> affinity(%c-1_i64) type("DeviceVisible|DeviceLocal") usage("TransferSource|TransferTarget|Transfer|DispatchStorageRead|DispatchStorageWrite|DispatchStorage|SharingImmutable") : !hal.buffer{%c128}
+    %memory_file = hal.ex.file.from_memory device(%device_4 : !hal.device) affinity(%c-1_i64) access(Read) buffer(%buffer_cst : !util.buffer)[%c0_3 for %c128] flags(%c0_i32) : !hal.file
+    %fence = hal.fence.create device(%device_4 : !hal.device) flags("None") : !hal.fence
+    hal.device.queue.read<%device_4 : !hal.device> affinity(%c-1_i64) wait(%4) signal(%fence) source(%memory_file : !hal.file)[%c0_i64] target(%buffer : !hal.buffer)[%c0_3] length(%c128) flags(0)
+    cf.br ^bb6(%fence, %buffer : !hal.fence, !hal.buffer)
+  ^bb6(%5: !hal.fence, %6: !hal.buffer):  // 2 preds: ^bb4, ^bb5
+    util.global.store %6, @_params.weight : !hal.buffer
+    util.global.store %5, @_params.weight__timepoint : !hal.fence
+    cf.br ^bb7
+  ^bb7:  // pred: ^bb6
+    util.initializer.return
+  }
+  hal.executable private @main_dispatch_0 {
+    hal.executable.variant public @cuda_nvptx_fb target(#executable_target_cuda_nvptx_fb) {
+      hal.executable.export public @main_dispatch_0_matmul_1x3x4_f32 ordinal(0) layout(#pipeline_layout) attributes {translation_info = #translation, workgroup_size = [1 : index, 3 : index, 1 : index]} {
+      ^bb0(%arg0: !hal.device):
+        %c3 = arith.constant 3 : index
+        %c1 = arith.constant 1 : index
+        hal.return %c3, %c1, %c1 : index, index, index
+      }
+      builtin.module {
+        llvm.func @__nv_fabsf(f32) -> f32
+        llvm.func @main_dispatch_0_matmul_1x3x4_f32(%arg0: !llvm.ptr<1> {llvm.align = 16 : i32, llvm.noalias, llvm.readonly}, %arg1: !llvm.ptr<1> {llvm.align = 16 : i32, llvm.noalias, llvm.readonly}, %arg2: !llvm.ptr<1> {llvm.align = 16 : i32, llvm.noalias}) {
+          %0 = llvm.mlir.constant(3 : i64) : i64
+          %1 = llvm.mlir.constant(2 : i64) : i64
+          %2 = llvm.mlir.constant(1 : i64) : i64
+          %3 = llvm.mlir.constant(0 : i64) : i64
+          %4 = llvm.mlir.constant(0 : i32) : i32
+          %5 = llvm.mlir.constant(63 : index) : i64
+          %6 = llvm.mlir.constant(4 : index) : i64
+          %7 = llvm.mlir.constant(dense<0.000000e+00> : vector<1xf32>) : vector<1xf32>
+          %8 = llvm.mlir.constant(0 : index) : i64
+          %9 = llvm.mlir.constant(1 : index) : i64
+          %10 = llvm.mlir.constant(2 : index) : i64
+          %11 = llvm.mlir.constant(3 : index) : i64
+          %12 = llvm.ptrtoint %arg0 : !llvm.ptr<1> to i64
+          %13 = llvm.and %12, %5  : i64
+          %14 = llvm.icmp "eq" %13, %8 : i64
+          "llvm.intr.assume"(%14) : (i1) -> ()
+          %15 = llvm.ptrtoint %arg1 : !llvm.ptr<1> to i64
+          %16 = llvm.and %15, %5  : i64
+          %17 = llvm.icmp "eq" %16, %8 : i64
+          "llvm.intr.assume"(%17) : (i1) -> ()
+          %18 = llvm.getelementptr %arg1[16] : (!llvm.ptr<1>) -> !llvm.ptr<1>, f32
+          %19 = llvm.ptrtoint %18 : !llvm.ptr<1> to i64
+          %20 = llvm.and %19, %5  : i64
+          %21 = llvm.icmp "eq" %20, %8 : i64
+          "llvm.intr.assume"(%21) : (i1) -> ()
+          %22 = llvm.ptrtoint %arg2 : !llvm.ptr<1> to i64
+          %23 = llvm.and %22, %5  : i64
+          %24 = llvm.icmp "eq" %23, %8 : i64
+          "llvm.intr.assume"(%24) : (i1) -> ()
+          %25 = nvvm.read.ptx.sreg.ctaid.x : i32
+          %26 = llvm.sext %25 : i32 to i64
+          %27 = llvm.mul %8, %6  : i64
+          %28 = llvm.add %27, %8  : i64
+          %29 = llvm.getelementptr %arg0[%28] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %30 = llvm.load %29 {alignment = 4 : i64} : !llvm.ptr<1> -> vector<4xf32>
+          %31 = llvm.mul %8, %11  : i64
+          %32 = llvm.add %31, %26  : i64
+          %33 = llvm.getelementptr %arg1[%32] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %34 = llvm.load %33 : !llvm.ptr<1> -> f32
+          %35 = llvm.mlir.undef : vector<1xf32>
+          %36 = llvm.insertelement %34, %35[%4 : i32] : vector<1xf32>
+          %37 = llvm.shufflevector %36, %35 [0] : vector<1xf32> 
+          %38 = llvm.mul %9, %11  : i64
+          %39 = llvm.add %38, %26  : i64
+          %40 = llvm.getelementptr %arg1[%39] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %41 = llvm.load %40 : !llvm.ptr<1> -> f32
+          %42 = llvm.insertelement %41, %35[%4 : i32] : vector<1xf32>
+          %43 = llvm.shufflevector %42, %35 [0] : vector<1xf32> 
+          %44 = llvm.mul %10, %11  : i64
+          %45 = llvm.add %44, %26  : i64
+          %46 = llvm.getelementptr %arg1[%45] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %47 = llvm.load %46 : !llvm.ptr<1> -> f32
+          %48 = llvm.insertelement %47, %35[%4 : i32] : vector<1xf32>
+          %49 = llvm.shufflevector %48, %35 [0] : vector<1xf32> 
+          %50 = llvm.mul %11, %11  : i64
+          %51 = llvm.add %50, %26  : i64
+          %52 = llvm.getelementptr %arg1[%51] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %53 = llvm.load %52 : !llvm.ptr<1> -> f32
+          %54 = llvm.insertelement %53, %35[%4 : i32] : vector<1xf32>
+          %55 = llvm.shufflevector %54, %35 [0] : vector<1xf32> 
+          %56 = llvm.extractelement %30[%3 : i64] : vector<4xf32>
+          %57 = llvm.insertelement %56, %35[%4 : i32] : vector<1xf32>
+          %58 = llvm.shufflevector %57, %35 [0] : vector<1xf32> 
+          %59 = llvm.intr.fmuladd(%58, %37, %7)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %60 = llvm.extractelement %30[%2 : i64] : vector<4xf32>
+          %61 = llvm.insertelement %60, %35[%4 : i32] : vector<1xf32>
+          %62 = llvm.shufflevector %61, %35 [0] : vector<1xf32> 
+          %63 = llvm.intr.fmuladd(%62, %43, %59)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %64 = llvm.extractelement %30[%1 : i64] : vector<4xf32>
+          %65 = llvm.insertelement %64, %35[%4 : i32] : vector<1xf32>
+          %66 = llvm.shufflevector %65, %35 [0] : vector<1xf32> 
+          %67 = llvm.intr.fmuladd(%66, %49, %63)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %68 = llvm.extractelement %30[%0 : i64] : vector<4xf32>
+          %69 = llvm.insertelement %68, %35[%4 : i32] : vector<1xf32>
+          %70 = llvm.shufflevector %69, %35 [0] : vector<1xf32> 
+          %71 = llvm.intr.fmuladd(%70, %55, %67)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %72 = llvm.getelementptr %18[%32] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          %73 = llvm.load %72 : !llvm.ptr<1> -> f32
+          %74 = llvm.insertelement %73, %35[%4 : i32] : vector<1xf32>
+          %75 = llvm.shufflevector %74, %35 [0] : vector<1xf32> 
+          %76 = llvm.extractelement %71[%3 : i64] : vector<1xf32>
+          %77 = llvm.call @__nv_fabsf(%76) : (f32) -> f32
+          %78 = llvm.insertelement %77, %7[%3 : i64] : vector<1xf32>
+          %79 = llvm.intr.fmuladd(%58, %37, %75)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %80 = llvm.intr.fmuladd(%62, %43, %79)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %81 = llvm.intr.fmuladd(%66, %49, %80)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %82 = llvm.intr.fmuladd(%70, %55, %81)  : (vector<1xf32>, vector<1xf32>, vector<1xf32>) -> vector<1xf32>
+          %83 = llvm.fadd %82, %78  : vector<1xf32>
+          %84 = llvm.extractelement %83[%3 : i64] : vector<1xf32>
+          %85 = llvm.getelementptr %arg2[%32] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, f32
+          llvm.store %84, %85 : f32, !llvm.ptr<1>
+          llvm.return
+        }
+      }
+    }
+  }
+  func.func @main(%arg0: !hal.buffer_view) -> !hal.buffer_view attributes {iree.abi.stub} {
+    %c3 = arith.constant 3 : index
+    %c2 = arith.constant 2 : index
+    %c1 = arith.constant 1 : index
+    %c-1 = arith.constant -1 : index
+    %c-1_i32 = arith.constant -1 : i32
+    %c0_i64 = arith.constant 0 : i64
+    %c-1_i64 = arith.constant -1 : i64
+    %c128 = arith.constant 128 : index
+    %c16 = arith.constant 16 : index
+    %c12 = arith.constant 12 : index
+    %c553648160_i32 = arith.constant 553648160 : i32
+    %c1_i32 = arith.constant 1 : i32
+    %c4 = arith.constant 4 : index
+    %c0 = arith.constant 0 : index
+    %_params.weight__timepoint = util.global.load @_params.weight__timepoint : !hal.fence
+    %_params.weight = util.global.load @_params.weight : !hal.buffer
+    %_device_query_0 = util.global.load @_device_query_0 : i1
+    hal.buffer_view.assert<%arg0 : !hal.buffer_view> message("input 0") shape([%c4]) type(%c553648160_i32) encoding(%c1_i32)
+    %buffer = hal.buffer_view.buffer<%arg0 : !hal.buffer_view> : !hal.buffer
+    %device = hal.ex.shared_device : !hal.device
+    %allocator = hal.device.allocator<%device : !hal.device> : !hal.allocator
+    hal.buffer.assert<%buffer : !hal.buffer> message("tensor") allocator(%allocator : !hal.allocator) minimum_length(%c16) type(DeviceVisible) usage("TransferSource|TransferTarget|Transfer|DispatchStorageRead|DispatchStorageWrite|DispatchStorage")
+    %fence = hal.fence.create device(%device : !hal.device) flags("None") : !hal.fence
+    %status = hal.fence.await until([%_params.weight__timepoint]) timeout_millis(%c-1_i32) : i32
+    %0 = util.null : !hal.fence
+    %transient_buffer = hal.device.queue.alloca<%device : !hal.device> affinity(%c-1_i64) wait(%0) signal(%fence) pool(%c0_i64) type("DeviceVisible|DeviceLocal") usage("TransferSource|TransferTarget|Transfer|DispatchStorageRead|DispatchStorageWrite|DispatchStorage") : !hal.buffer{%c12}
+    %status_0 = hal.fence.await until([%fence]) timeout_millis(%c-1_i32) : i32
+    %cmd = hal.command_buffer.create device(%device : !hal.device) mode("OneShot|AllowInlineExecution") categories("Transfer|Dispatch") : !hal.command_buffer
+    %1 = arith.select %_device_query_0, %c0, %c-1 : index
+    %2 = arith.index_cast %1 : index to i32
+    cf.switch %2 : i32, [
+      default: ^bb2,
+      0: ^bb1
+    ]
+  ^bb1:  // pred: ^bb0
+    %_pipeline_layout_0 = util.global.load @_pipeline_layout_0 : !hal.pipeline_layout
+    hal.command_buffer.push_descriptor_set<%cmd : !hal.command_buffer> layout(%_pipeline_layout_0 : !hal.pipeline_layout)[%c0] bindings([
+      %c0 = (%buffer : !hal.buffer)[%c0, %c16], 
+      %c1 = (%_params.weight : !hal.buffer)[%c0, %c128], 
+      %c2 = (%transient_buffer : !hal.buffer)[%c0, %c12]
+    ])
+    %_executable_main_dispatch_0 = util.global.load @_executable_main_dispatch_0 : !hal.executable
+    hal.command_buffer.dispatch<%cmd : !hal.command_buffer> target(%_executable_main_dispatch_0 : !hal.executable)[0] workgroups([%c3, %c1, %c1])
+    cf.br ^bb3
+  ^bb2:  // pred: ^bb0
+    cf.br ^bb3
+  ^bb3:  // 2 preds: ^bb1, ^bb2
+    hal.command_buffer.execution_barrier<%cmd : !hal.command_buffer> source("Dispatch|Transfer|CommandRetire") target("CommandIssue|Dispatch|Transfer") flags("None")
+    hal.command_buffer.finalize<%cmd : !hal.command_buffer>
+    %fence_1 = hal.fence.create device(%device : !hal.device) flags("None") : !hal.fence
+    %status_2 = hal.fence.await until([%fence]) timeout_millis(%c-1_i32) : i32
+    hal.device.queue.execute<%device : !hal.device> affinity(%c-1_i64) wait(%0) signal(%fence_1) commands([%cmd])
+    %status_3 = hal.fence.await until([%fence_1]) timeout_millis(%c-1_i32) : i32
+    util.status.check_ok %status_3, "failed to wait on timepoint"
+    %view = hal.buffer_view.create buffer(%transient_buffer : !hal.buffer)[%c0, %c12] shape([%c3]) type(%c553648160_i32) encoding(%c1_i32) : !hal.buffer_view
+    return %view : !hal.buffer_view
+  }
+}
+
+
+//
+// Generated by LLVM NVPTX Back-End
+//
+
+.version 7.5
+.target sm_75
+.address_size 64
+
+	// .globl	main_dispatch_0_matmul_1x3x4_f32
+
+.visible .entry main_dispatch_0_matmul_1x3x4_f32(
+	.param .u64 main_dispatch_0_matmul_1x3x4_f32_param_0,
+	.param .u64 main_dispatch_0_matmul_1x3x4_f32_param_1,
+	.param .u64 main_dispatch_0_matmul_1x3x4_f32_param_2
+)
+.maxntid 1, 3, 1
+{
+	.reg .b32 	%r<2>;
+	.reg .f32 	%f<20>;
+	.reg .b64 	%rd<7>;
+
+	ld.param.u64 	%rd1, [main_dispatch_0_matmul_1x3x4_f32_param_0];
+	ld.param.u64 	%rd2, [main_dispatch_0_matmul_1x3x4_f32_param_1];
+	ld.param.u64 	%rd3, [main_dispatch_0_matmul_1x3x4_f32_param_2];
+	mov.u32 	%r1, %ctaid.x;
+	ld.global.nc.v4.f32 	{%f1, %f2, %f3, %f4}, [%rd1];
+	mul.wide.u32 	%rd4, %r1, 4;
+	add.s64 	%rd5, %rd2, %rd4;
+	ld.global.nc.f32 	%f5, [%rd5];
+	ld.global.nc.f32 	%f6, [%rd5+12];
+	ld.global.nc.f32 	%f7, [%rd5+24];
+	ld.global.nc.f32 	%f8, [%rd5+36];
+	fma.rn.f32 	%f9, %f1, %f5, 0f00000000;
+	fma.rn.f32 	%f10, %f2, %f6, %f9;
+	fma.rn.f32 	%f11, %f3, %f7, %f10;
+	fma.rn.f32 	%f12, %f4, %f8, %f11;
+	ld.global.nc.f32 	%f13, [%rd5+64];
+	abs.f32 	%f14, %f12;
+	fma.rn.f32 	%f15, %f1, %f5, %f13;
+	fma.rn.f32 	%f16, %f2, %f6, %f15;
+	fma.rn.f32 	%f17, %f3, %f7, %f16;
+	fma.rn.f32 	%f18, %f4, %f8, %f17;
+	add.rn.f32 	%f19, %f14, %f18;
+	add.s64 	%rd6, %rd3, %rd4;
+	st.global.f32 	[%rd6], %f19;
+	ret;
+
+}
